@@ -2,503 +2,511 @@
 //INITIALIZE VARIABLES//
 ////////////////////////
 
-//canvas variables
-let canvas = document.getElementById("canvas");
-let ctx = canvas.getContext("2d");
-
-//player position and speed
-let playerX = 400;
-let playerY = 700;
-let playerRotation = 0;
-let playerRotationRad = playerRotation * Math.PI / 180;
-let playerSpeed = 0;
-let speedMultiplier = 1;
-
-//player dimensions
-const hX = 15;
-const hY = hX/2;
-
-//player hitbox coordinates
-let hitboxAX;
-let hitboxAY;
-let hitboxBX;
-let hitboxBY;
-let hitboxCX;
-let hitboxCY;
-let hitboxDX;
-let hitboxDY;
-
-//calculation variables
-let newX;
-let newY;
-
-//lap variables
-let lapsCompleted = 0;
-let lapStarted;
-let checkpointPassed = 3;
-
-//time variables
-let actualTime = Date.now();
-let currentTime;
-let bestTime = Infinity;
-let lastTime;
-let currentMin;
-let currentSec;
-let currentMilli;
-let lastMin;
-let lastSec;
-let lastMilli;
-let bestMin;
-let bestSec;
-let bestMilli;
-let timeOffset = 0;
-let timePaused = 0;
-
-//other variables
-let restarted = true;
-
-//case variables
+//phase variable
+//can be home, courseSelect, characterSelect, drive, paused
+//only switches with it are in tick() and detectClick()
 let phase = 'home';
 
-//time trial variables
-let currentX = [];
-let currentY = [];
-let currentRotation = [];
-let bestTimeX = [];
-let bestTimeY = [];
-let bestTimeRotation = [];
-let raceTicks = 0;
+//options selected variables
+let raceMode;//race or timeTrial
+let courseChosen;//course 1, 2, 3, 4, tournament A1, A2, A3, A4
+let characterChosen;//car 1, 2, 3
 
-//keys pressed set
+//const variables for drawing
+const halfLength = 15;
+const halfHeight = halfLength/2;
+const tileSize = 50;
+
+//higher number is weaker grass
+const grassStrength = 0.95;
+
+//control sensitivity and speed limit variables
+const rotationSpeed = 4;
+const accelerationSpeed = 0.3;
+const maxSpeed = 7;
+
+//car variables
+let playerX;
+let playerY;
+let playerRotation;
+let playerRotationRad;
+let playerSpeed;
+let playerSpeedMultiplier;
+
+//player hitbox variables
+let playerHitboxX = [];
+let playerHitboxY = [];
+let playerHitboxQuadrantX = [];
+let playerHitboxQuadrantY = [];
+let playerHitboxOffsetX = [];
+let playerHitboxOffsetY = [];
+
+//lap detection variables
+let raceSection = 0;
+let lapsCompleted = 0;
+
+//const lap variables
+const lapsInRace = 3;
+
+//time trial variables
+let playerXArray = [];
+let playerYArray = [];
+let playerRotationArray = [];
+
+//canvas variable
+let ctx = document.getElementById('canvas').getContext('2d');
+
+//2d arrays with blocks for each racetrack
+//a = grass, b = road, c-j = wall from top left clockwise, k-n inside corners from top left clockwise, o and p are finish line
+let courseOne = [
+    ['a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a'],
+    ['a', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'a'],
+    ['a', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'a'],
+    ['a', 'b', 'b', 'g', 'h', 'h', 'h', 'h', 'h', 'h', 'h', 'h', 'i', 'b', 'b', 'a'],
+    ['a', 'b', 'b', 'f', 'k', 'd', 'd', 'd', 'd', 'd', 'd', 'd', 'c', 'b', 'b', 'a'],
+    ['a', 'b', 'b', 'f', 'j', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'a'],
+    ['a', 'b', 'b', 'f', 'j', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'a'],
+    ['a', 'b', 'b', 'f', 'j', 'b', 'b', 'g', 'h', 'h', 'h', 'h', 'h', 'h', 'h', 'h'],
+    ['a', 'b', 'b', 'f', 'j', 'b', 'b', 'e', 'd', 'd', 'd', 'd', 'd', 'd', 'd', 'd'],
+    ['a', 'b', 'b', 'f', 'j', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'a'],
+    ['a', 'b', 'b', 'f', 'j', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'a'],
+    ['a', 'b', 'b', 'f', 'n', 'h', 'h', 'h', 'h', 'h', 'h', 'h', 'i', 'b', 'b', 'a'],
+    ['a', 'b', 'b', 'e', 'd', 'd', 'd', 'd', 'd', 'd', 'd', 'd', 'c', 'b', 'b', 'a'],
+    ['a', 'b', 'b', 'b', 'b', 'b', 'o', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'a'],
+    ['a', 'b', 'b', 'b', 'b', 'b', 'p', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'a'],
+    ['a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a'],
+];
+
+//course 1's checkpoints, with each one being x1, y1, x2, y2
+let courseOneCheckpoints = [
+    [0, 375, 200, 425],
+    [375, 0, 425, 200],
+    [200, 375, 400, 425],
+    [300, 600, 350, 800]
+];
+
+//variable with current course
+let currentCourse = courseOne;
+let currentCourseCheckpoints = courseOneCheckpoints;
+
+//event listeners
 const pressedKeys = new Set();
 
+////////////////////////////
+//VARIABLE RESET FUNCTIONS//
+////////////////////////////
 
-
-////////////////////////////////////////////
-//FUNCTIONS CALLED BY OTHER FUNCTIONS ONLY//
-////////////////////////////////////////////
-
-//starts the timer
-let startTimer = function() {
-    lapStarted = actualTime
+//set variables to default for home menu
+let returnToHomeVariables = function() {
+    raceMode = null;
+    courseChosen = null;
+    characterChosen = null;
 };
 
-//gets current time for lap
-let getCurrentTimer = function() {
-    return ((actualTime - lapStarted) - timeOffset);
+//sets variables to default for races
+let raceVariables = function() {
+    playerX;
+    playerY;
+    playerRotation;
+    playerRotationRad;
+    playerSpeed;
+    playerSpeedMultiplier;
+    raceSection;
+    lapsCompleted;
 };
 
-//pauses timer
-let pauseTimer = function() {
-    timePaused = actualTime;
-};
-
-//unpauses timer
-let unpauseTimer = function() {
-    timeOffset += (actualTime - timePaused);
-};
-
-//uses player coordinates to get hitbox coordinates
-let getHitboxCorners = function() {
-    newX = -hX*Math.cos(playerRotationRad) - hY*Math.sin(playerRotationRad);
-    newY = -hX*Math.sin(playerRotationRad) + hY*Math.cos(playerRotationRad);
-
-    hitboxAX = newX + playerX;
-    hitboxAY = newY + playerY;
-
-    newX = -hX*Math.cos(playerRotationRad) - -hY*Math.sin(playerRotationRad);
-    newY = -hX*Math.sin(playerRotationRad) + -hY*Math.cos(playerRotationRad);
-
-    hitboxBX = newX + playerX;
-    hitboxBY = newY + playerY;
-
-    newX = hX*Math.cos(playerRotationRad) - -hY*Math.sin(playerRotationRad);
-    newY = hX*Math.sin(playerRotationRad) + -hY*Math.cos(playerRotationRad);
-
-    hitboxCX = newX + playerX;
-    hitboxCY = newY + playerY;
-
-    newX = hX*Math.cos(playerRotationRad) - hY*Math.sin(playerRotationRad);
-    newY = hX*Math.sin(playerRotationRad) + hY*Math.cos(playerRotationRad);
-
-    hitboxDX = newX + playerX;
-    hitboxDY = newY + playerY;
-};
-
-//checks for collision with a wall at set coordinates
-let checkCoordsForWall = function(x1, x2, y1, y2, directionMin, directionMax) {
-    if (((hitboxAX > x1 && hitboxAX < x2 && hitboxAY > y1 && hitboxAY < y2) || (hitboxBX > x1 && hitboxBX < x2 && hitboxBY > y1 && hitboxBY < y2)) && playerSpeed >= 0) {
-        if (directionMin != 270) {
-            if (playerRotation > directionMin && playerRotation < directionMax) {
-                playerSpeed = -1;
-            };
-        } else {
-            if (playerRotation > directionMin || playerRotation << directionMax) {
-                playerSpeed = -1;
-            };
-        };
-    } else if (((hitboxCX > x1 && hitboxCX < x2 && hitboxCY > y1 && hitboxCY < y2) || (hitboxDX > x1 && hitboxDX < x2 && hitboxDY > y1 && hitboxDY < y2) && playerSpeed <= 0)) {
-        if (directionMin != 90 && directionMin != 270) {
-            if ((playerRotation > (360 - directionMax)) && (playerRotation < (360 - directionMin))) {
-                playerSpeed = 1;
-            };
-        } else {
-            if (playerRotation > (360 - directionMin) || playerRotation < (360 - directionMax)) {
-                playerSpeed = 1;
-            };
-        };
-    };
-};
-
-//checks for collision with the boundary
-let checkBoundaryCollision = function() {
-    //left edge
-    checkCoordsForWall(-15, 1, -15, 815, 270, 90);
-
-    //right edge
-    checkCoordsForWall(799, 815, -15, 815, 90, 270);
-
-    //top edge
-    checkCoordsForWall(-15, 815, -15, 1, 0, 180);
-
-    //bottom edge
-    checkCoordsForWall(-15, 815, 799, 815, 180, 360);
-};
-
-//checks collision for all walls, triggers checkCoordsForWall
-let checkWallCollision = function() {
-    //Bottom hoorizontal line lower side
-    checkCoordsForWall(190, 610, 600, 610, 0, 180);
-
-    // Bottom horizontal line top side
-    checkCoordsForWall(200, 610, 590, 600, 180, 360);
-
-    //Bottom horizontal line right side
-    checkCoordsForWall(600, 610, 590, 610, 270, 90);
-    
-    //Vertical line left side
-    checkCoordsForWall(190, 200, 190, 610, 90, 270);
-
-    //Vertical line right side
-    checkCoordsForWall(200, 210, 210, 590, 270, 90);
-
-    //Top horizontal line top side
-    checkCoordsForWall(190, 610, 190, 200, 180, 360);
-
-    //Top horizontal line bottom side
-    checkCoordsForWall(200, 610, 200, 210, 0, 180);
-
-    //Top horizontal line right side
-    checkCoordsForWall(600, 610, 190, 210, 270, 90);
-
-    //Right horizontal line top side
-    checkCoordsForWall(390, 800, 390, 400, 180, 360);
-
-    //Right horizontal line bottom side
-    checkCoordsForWall(390, 800, 400, 410, 0, 180);
-
-    //Right horizontal line left side
-    checkCoordsForWall(390, 400, 390, 410, 90, 270);
-};
-
-//checks for collision with a section of grass
-let checkCoordsForGrass = function(x1, x2, y1, y2) {
-    if (hitboxAX > x1 && hitboxAX < x2 && hitboxAY > y1 && hitboxAY < y2) {
-        speedMultiplier *= 2
-    };
-
-    if (hitboxBX > x1 && hitboxBX < x2 && hitboxBY > y1 && hitboxBY < y2) {
-        speedMultiplier *= 2
-    };
-
-    if (hitboxCX > x1 && hitboxCX < x2 && hitboxCY > y1 && hitboxCY < y2) {
-        speedMultiplier *= 2
-    };
-
-    if (hitboxDX > x1 && hitboxDX < x2 && hitboxDY > y1 && hitboxDY < y2) {
-        speedMultiplier *= 2
-    };
-};
-
-//checks for collision with all grass, triggers checkCoordsForGrass
-let checkGrassCollision = function() {
-    speedMultiplier = 1;
-
-    //grass at bottom edge
-    checkCoordsForGrass(0, 800, 750, 800);
-
-    //grass at top edge
-    checkCoordsForGrass(0, 800, 0, 50);
-
-    //grass on left edge
-    checkCoordsForGrass(0, 50, 50, 750);
-
-    //grass on right edge top
-    checkCoordsForGrass(750, 800, 50, 390);
-
-    //grass on right edge bottom
-    checkCoordsForGrass(750, 800, 410, 800);
-
-    //grass above right horizontal wall
-    checkCoordsForGrass(350, 750, 350, 390);
-
-    //grass below right horizontal wall
-    checkCoordsForGrass(350, 750, 410, 450);
-
-    //grass to the left of to right horizontal wall
-    checkCoordsForGrass(350, 390, 390, 410);
-
-    //grass below bottom horizontal wall
-    checkCoordsForGrass(150, 650, 610, 650);
-
-    //grass above bottom horizontal wall
-    checkCoordsForGrass(210, 650, 550, 590);
-
-    //grass to the right of to bottom horizontal wall
-    checkCoordsForGrass(610, 650, 590, 610);
-
-    //grass to the left of vertical wall
-    checkCoordsForGrass(150, 190, 190, 610);
-
-    //grass to the right of vertical wall
-    checkCoordsForGrass(210, 250, 250, 550);
-
-    //grass above top horizontal wall
-    checkCoordsForGrass(150, 650, 150, 190);
-
-    //grass below top horizontal wall
-    checkCoordsForGrass(210, 650, 210, 250);
-
-    //grass to the right of top horizontal wall
-    checkCoordsForGrass(610, 650, 190, 210);
-};
-
-//checks a checkpoint for car passed through
-let checkCheckpoint = function(x1, x2, y1, y2, checkpointNumber, previousCheckpoint) {
-    if ((hitboxAX > x1 && hitboxAX < x2 && hitboxAY > y1 && hitboxAY < y2) || (hitboxBX > x1 && hitboxBX < x2 && hitboxBY > y1 && hitboxBY < y2) || (hitboxCX > x1 && hitboxCX < x2 && hitboxCY > y1 && hitboxCY < y2) || (hitboxDX > x1 && hitboxDX < x2 && hitboxDY > y1 && hitboxDY < y2)) {
-        if (checkpointPassed == (previousCheckpoint)) {
-            checkpointPassed = checkpointNumber;
-            if (checkpointNumber == 4) {
-                timeOffset = 0;
-                if (restarted == true) {
-                    restarted = false;
-                    startTimer();
-                } else {
-                    lapsCompleted++
-
-                    if (lapsCompleted == 3) {
-                        lapsCompleted = 0;
-
-                        lastTime = currentTime;
-                        lastMin = currentMin;
-                        lastSec = currentSec;
-                        lastMilli = currentMilli;
-
-                        if (lastTime < bestTime) {
-                            bestTime = lastTime;
-                            bestMin = lastMin;
-                            bestSec = lastSec;
-                            bestMilli = lastMilli
-
-                            bestTimeX = currentX;
-                            bestTimeY = currentY;
-                            bestTimeRotation = currentRotation;
-                        };
-
-                        currentX = [];
-                        currentY = [];
-                        currentRotation = [];
-                        raceTicks = 0;
-
-                        startTimer();
-
-                        lapsCompleted == 0;
-                    };
-                };
-            };
-        };
-    };
-};
-
-//reset variables for time trial
+//sets variables to default for time trials
 let timeTrialVariables = function() {
     playerX = 400;
     playerY = 700;
     playerRotation = 0;
     playerRotationRad = playerRotation * Math.PI / 180;
     playerSpeed = 0;
-
-    currentX = [];
-    currentY = [];
-    currentRotation = [];
-
-    speedMultiplier = 1;
-    
-    checkpointPassed = 3;
-    raceTicks = 0;
+    playerSpeedMultiplier = 1;
+    raceSection = 0;
     lapsCompleted = 0;
-    restarted = true;
 };
 
-let raceVariables = function() {
-    playerX = 400;
-    playerY = 700;
-    playerRotation = 0;
-    playerRotationRad = playerRotation * Math.PI / 180;
-    playerSpeed = 0;
+////////////////////////////
+//EVENT LISTENER FUNCTIONS//
+////////////////////////////
 
-    currentX = [];
-    currentY = [];
-    currentRotation = [];
+//creates event listeners
+let eventListeners = function() {
+    //key pressed events to add to set
+    window.addEventListener('keydown', e => {
+        pressedKeys.add(e.code);
+    });
 
-    speedMultiplier = 1;
+    //key released event to remove from set
+    window.addEventListener('keyup', e => {
+        pressedKeys.delete(e.code);
+    });
 
-    checkpointPassed = 3;
-    raceTicks = 0;
-    lapsCompleted = 0;
-    restarted = true;
+    //click event
+    canvas.addEventListener('click', detectClick);
 };
 
+//detects clicks
+let detectClick = function(event) {
+    //get x and y of click
+    const rect = canvas.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
 
+    //switch for each phase's different button locations and changes after clicked
+    switch (phase) {
+        case 'home':
+            if (100 < clickX && clickX < 700 && 200 < clickY && clickY < 300) {
+                phase = 'courseSelect';
+                raceMode = 'timeTrial';
+                timeTrialVariables();
+            } else if (100 < clickX && clickX < 700 && 500 < clickY && clickY < 600) {
+                phase = 'courseSelect';
+                raceMode = 'race';
+                raceVariables();
+            };
+
+            break;
+        
+        case 'courseSelect':
+            if (100 < clickX && clickX < 700 && 50 < clickY && clickY < 150) {
+                phase = 'characterSelect';
+                courseChosen = '1';
+            } else if (100 < clickX && clickX < 700 && 250 < clickY && clickY < 350) {
+                phase = 'characterSelect';
+                courseChosen = '2';
+            } else if (100 < clickX && clickX < 700 && 450 < clickY && clickY < 550) {
+                phase = 'characterSelect';
+                courseChosen = '3';
+            } else if (100 < clickX && clickX < 700 && 650 < clickY && clickY < 750) {
+                phase = 'characterSelect';
+                courseChosen = '4';
+            };
+            
+            break;
+
+        case 'characterSelect':
+            if (100 < clickX && clickX < 700 && 100 < clickY && clickY < 200) {
+                phase = 'drive';
+                characterChosen = '1';
+            } else if (100 < clickX && clickX < 700 && 350 < clickY && clickY < 450) {
+                phase = 'drive';
+                characterChosen = '2';
+            } else if (100 < clickX && clickX < 700 && 600 < clickY && clickY < 700) {
+                phase = 'drive';
+                characterChosen = '3';
+            };
+
+            break;
+
+        case 'drive':
+            if (755 < clickX && clickX < 795 && 5 < clickY && clickY < 45) {
+                phase = 'paused';
+            };
+
+            break;
+
+        case 'paused':
+            if (755 < clickX && clickX < 795 && 5 < clickY && clickY < 45) {
+                phase = 'drive';
+            };
+
+            break;
+    };
+
+    //detect home button clicked
+    if (5 < clickX && clickX < 45 && 5 < clickY && clickY < 45) {
+        phase = 'home';
+        returnToHomeVariables();
+    };
+};
 
 //////////////////////
 //MOVEMENT FUNCTIONS//
 //////////////////////
 
-//rotates the car
+//changes the playerRotation
 let steerCar = function() {
+    //rotate car with keys pressed
     if (pressedKeys.has('ArrowLeft')) {
-        playerRotation -= 4;
+        playerRotation -= rotationSpeed;
     };
 
     if (pressedKeys.has('ArrowRight')) {
-        playerRotation += 4;
+        playerRotation += rotationSpeed;
     };
 
+    //prevent rotating above 359 or below 0
     if (playerRotation > 359) {
-        playerRotation %= 360;
+        playerRotation -= 360;
     } else if (playerRotation < 0) {
         playerRotation += 360;
     };
 
+    //convert degrees or radians for future calculations
     playerRotationRad = playerRotation * Math.PI / 180;
 };
 
 //moves the car forward or backwards
 let accelerateCar = function() {
+    //detect forward and backward
     if (pressedKeys.has('ArrowUp')) {
-        playerSpeed += 0.3
+        playerSpeed += accelerationSpeed;
     };
 
     if (pressedKeys.has('ArrowDown')) {
-        if (playerSpeed > 0) {
-            playerSpeed -= 0.6
-        } else {
-            playerSpeed -= 0.3;
-        };
+        playerSpeed -= accelerationSpeed;
     };
 
+    //decelleration when nothing pressed
     if (!pressedKeys.has('ArrowUp') && !pressedKeys.has('ArrowDown')) {
-        if (playerSpeed < 0.3 && playerSpeed > -0.3) {
+        if (playerSpeed > accelerationSpeed) {
+            playerSpeed -= (accelerationSpeed/2);
+        } else if (playerSpeed < (-1*accelerationSpeed)) {
+            playerSpeed += (accelerationSpeed/2);
+        } else {
             playerSpeed = 0;
-        } else if (playerSpeed > 0) {
-            playerSpeed -= .15;
-        } else if (playerSpeed < 0) {
-            playerSpeed += .15;
         };
     };
 
-    playerSpeed = Math.max((-4.5 / speedMultiplier), Math.min((7 / speedMultiplier), playerSpeed));
+    //max speed limiting
+    if (playerSpeed > maxSpeed) {
+        playerSpeed = maxSpeed;
+    } else if (playerSpeed < (-1*maxSpeed)) {
+        playerSpeed = (-1*maxSpeed);
+    };
 
+    //grass slowdown car speed
+    playerSpeed *= playerSpeedMultiplier;
+
+    //convert speed and rotation to x and y changes
     playerY += -(playerSpeed * Math.sin(playerRotationRad));
     playerX += -(playerSpeed * Math.cos(playerRotationRad));
 };
 
-//updates the player's position array
-let playerPositionArray = function() {
-    if (restarted == false) {
-        currentX.push(playerX);
-        currentY.push(playerY);
-        currentRotation.push(playerRotation);
-    };
+//records player's position and rotation for time trials
+let recordPlayerPosition = function() {
+    //put current position at end of arrays
+    playerXArray.push(playerX);
+    playerYArray.push(playerY);
+    playerRotationArray.push(playerRotation);
 };
-
-
 
 /////////////////////
 //DRAWING FUNCTIONS//
 /////////////////////
 
-//draws home screen
-let drawHomeScreen = function() {
-    ctx.fillStyle = "#1111AA";
+//draws the course
+let drawCourse = function(transparancy) {
+    //i is y coord, j is x coord
+
+    //gets current quadrant, i = y, j = x
+    for (let i = 0; i < currentCourse.length; i++) {
+        for (let j = 0; j < currentCourse[i].length; j++) {
+
+            //checks for road sections
+            if (currentCourse[i][j] == 'b' || currentCourse[i][j] == 'o' || currentCourse[i][j] == 'p') {
+                //fills road
+                ctx.fillStyle = '#2e2e2e' + transparancy;
+                ctx.fillRect(j*tileSize, i*tileSize, tileSize, tileSize);
+                
+                //checks for and draws finish line
+                if (currentCourse[i][j] == 'o') {
+                    ctx.fillStyle = '#ffffff' + transparancy;
+
+                    for (let k = 0; k < 5; k++) {
+                        for (let l = 0; l < 5; l++) {
+                            if (k%2 + l%2 != 1) {
+                                ctx.fillRect(j*tileSize + k*(tileSize/5), i*tileSize + l*(tileSize/5), tileSize/5, tileSize/5);
+                            };
+                        };
+                    };
+
+                } else if (currentCourse[i][j] == 'p') {
+                    ctx.fillStyle = '#ffffff' + transparancy;
+
+                    for (let k = 0; k < 5; k++) {
+                        for (let l = 0; l < 5; l++) {
+                            if (k%2 + l%2 == 1) {
+                                ctx.fillRect(j*tileSize + k*(tileSize/5), i*tileSize + l*(tileSize/5), tileSize/5, tileSize/5);
+                            };
+                        };
+                    };
+                };
+            
+            //grass sections only
+            } else {
+                //draws grass
+                ctx.fillStyle = '#00a225' + transparancy;
+                ctx.fillRect(j*tileSize, i*tileSize, tileSize, tileSize);
+                
+                ctx.fillStyle = '#FFFF00' + transparancy;
+                
+                //switch with all the different wall patterns
+                switch (currentCourse[i][j]) {
+                    case 'a':
+                        break;
+                    
+                    case 'c':
+                        ctx.fillRect(j*tileSize, i*tileSize, tileSize/5, tileSize/5);
+                        break;
+
+                    case 'd':
+                        ctx.fillRect(j*tileSize, i*tileSize, tileSize, tileSize/5);
+                        break;
+
+                    case 'e':
+                        ctx.fillRect(j*tileSize + tileSize*0.8, i*tileSize, tileSize/5, tileSize/5);
+                        break;
+
+                    case 'f':
+                        ctx.fillRect(j*tileSize + tileSize*0.8, i*tileSize, tileSize/5, tileSize);
+                        break;
+
+                    case 'g':
+                        ctx.fillRect(j*tileSize + tileSize*0.8, i*tileSize + tileSize*0.8, tileSize/5, tileSize/5);
+                        break;
+
+                    case 'h':
+                        ctx.fillRect(j*tileSize, i*tileSize + tileSize*0.8, tileSize, tileSize/5);
+                        break;
+
+                    case 'i':
+                        ctx.fillRect(j*tileSize, i*tileSize + tileSize*0.8, tileSize/5, tileSize/5);
+                        break;
+
+                    case 'j':
+                        ctx.fillRect(j*tileSize, i*tileSize, tileSize/5, tileSize);
+                        break;
+
+                    case 'k':
+                        ctx.fillRect(j*tileSize, i*tileSize, tileSize, tileSize/5);
+                        ctx.fillRect(j*tileSize, i*tileSize+tileSize/5, tileSize/5, tileSize*0.8);
+                        break;
+
+                    case 'l':
+                        ctx.fillRect(j*tileSize, i*tileSize, tileSize, tileSize/5);
+                        ctx.fillRect(j*tileSize + tileSize*0.8, i*tileSize+tileSize/5, tileSize/5, tileSize*0.8);
+                        break;
+                    
+                    case 'm':
+                        ctx.fillRect(j*tileSize + tileSize*0.8, i*tileSize, tileSize/5, tileSize*0.8);
+                        ctx.fillRect(j*tileSize, i*tileSize + tileSize*0.8, tileSize, tileSize/5);
+                        break;
+                    
+                    case 'n':
+                        ctx.fillRect(j*tileSize, i*tileSize + tileSize*0.8, tileSize, tileSize/5);
+                        ctx.fillRect(j*tileSize, i*tileSize, tileSize/5, tileSize*0.8);
+                        break;
+                };
+            };
+        };
+    };
+};
+
+//draws car
+let drawCar = function(colour, colourTwo, transparancy, x, y, rotation) {
+    //save current rotation and translation of canvas
+    ctx.save();
+
+    //rotate and move canvas to make at coords facing rotation
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+
+    //draw car wheels
+    ctx.fillStyle = '#000000' + transparancy;
+    ctx.fillRect((halfLength*-0.9), (halfHeight*-1.4), (halfLength*0.4), (halfHeight*0.4));
+    ctx.fillRect((halfLength*-0.9), (halfHeight*1.1), (halfLength*0.4), (halfHeight*0.4));
+    ctx.fillRect((halfLength*0.5), (halfHeight*-1.4), (halfLength*0.4), (halfHeight*0.4));
+    ctx.fillRect((halfLength*0.5), (halfHeight*1.1), (halfLength*0.4), (halfHeight*0.4));
+
+    //draw car body
+    ctx.fillStyle = '#FF0000';
+    ctx.fillRect((halfLength*-1), (halfHeight*-1), (halfLength*2), (halfHeight*2));
+
+    ctx.fillStyle = '#FFFF00';
+    ctx.fillRect((halfLength*-0.75), (halfHeight*-0.5), (halfLength*0.5), halfHeight);
+
+    //restore canvas to normal
+    ctx.restore();
+};
+
+//draws home menu
+let drawHomeMenu = function() {
+    //draw background
+    ctx.fillStyle = '#1111AA';
     ctx.fillRect(0, 0, 800, 800);
     
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(100, 100, 600, 100);
-    ctx.fillRect(100, 300, 600, 100);
+    //draw buttons
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(100, 200, 600, 100);
+    ctx.fillRect(100, 500, 600, 100);
 
-    ctx.fillStyle = "#000000";
-    ctx.font = "50px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText('Time Trial', 400, 165);
-    ctx.fillText('Race', 400, 365)
-};
-
-//draws time trial select menu
-let drawTimeTrialSelect = function() {
-    ctx.fillStyle = "#1111AA";
-    ctx.fillRect(0, 0, 800, 800);
-
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(100, 50, 600, 200);
-    ctx.fillRect(100, 300, 600, 200);
-    ctx.fillRect(100, 550, 600, 200);
-
-    ctx.fillStyle = "#000000";
+    //write text on buttons
+    ctx.fillStyle = '#000000';
     ctx.font = '50px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('Race solo', 400, 165);
-    ctx.fillText('Race ghost', 400, 415);
-    ctx.fillText('View ghost time', 400, 665);
+    ctx.fillText('Time Trial', 400, 265);
+    ctx.fillText('Race (incomplete)', 400, 565);
+
+    //write version number
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('v0.1.0.2', 20, 780);
 };
 
-//draws road
-let drawRoad = function(transparancy) {
-    ctx.fillStyle = '#00A225' + transparancy;
+//draws course menu
+let drawCourseMenu = function() {
+    //draw background
+    ctx.fillStyle = '#1111AA';
     ctx.fillRect(0, 0, 800, 800);
 
-    ctx.fillStyle = '#2e2e2e' + transparancy;
-    ctx.fillRect(50, 650, 700, 100);
-    ctx.fillRect(50, 150, 100, 500);
-    ctx.fillRect(50, 50, 700, 100);
-    ctx.fillRect(650, 150, 100, 200);
-    ctx.fillRect(250, 250, 400, 100);
-    ctx.fillRect(250, 350, 100, 200);
-    ctx.fillRect(350, 450, 400, 100);
-    ctx.fillRect(650, 550, 100, 100);
+    //draw buttons
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(100, 50, 600, 100);
+    ctx.fillRect(100, 250, 600, 100);
+    ctx.fillRect(100, 450, 600, 100);
+    ctx.fillRect(100, 650, 600, 100);
 
-    ctx.fillStyle = '#FFFFFF' + transparancy;
+    //write text on buttons
+    ctx.fillStyle = '#000000';
+    ctx.font = '50px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Course 1', 400, 115);
+    ctx.fillText('Course 2 (incomplete)', 400, 315);
+    ctx.fillText('Course 3 (incomplete)', 400, 515);
+    ctx.fillText('Course 4 (incomplete)', 400, 715);
+};
 
-    for (let j = 0; j < 3; j++){
-        for (let i = 0; i < 5; i++) {
-            ctx.fillRect((300 + (10 * j)), (650 + (20 * i) + ((j % 2) * 10)), 10, 10);
-        };
+//draws character select menu
+let drawCharacterMenu = function() {
+    //draw background
+    ctx.fillStyle = '#1111aa';
+    ctx.fillRect(0, 0, 800, 800);
 
-    };
+    //draw buttons
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(100, 100, 600, 100);
+    ctx.fillRect(100, 350, 600, 100);
+    ctx.fillRect(100, 600, 600, 100);
 
-    ctx.fillStyle = '#FFFF00' + transparancy;
-    ctx.fillRect(190, 190, 420, 20);
-    ctx.fillRect(190, 210, 20, 400);
-    ctx.fillRect(210, 590, 400, 20);
-    ctx.fillRect(390, 390, 410, 20);
+    //write text on buttons
+    ctx.fillStyle = '#000000';
+    ctx.font = '50px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Car 1', 400, 165);
+    ctx.fillText('Car 2 (incomplete)', 400, 415);
+    ctx.fillText('Car 3 (incomplete)', 400, 665);
 };
 
 //draws home button
 let drawHomeButton = function() {
+    //draw button background
     ctx.fillStyle = '#9E9E9E';
     ctx.fillRect(5, 5, 40, 40);
 
+    //draw home symbol
     ctx.fillStyle = '#000000';
 
     ctx.beginPath();
@@ -517,459 +525,296 @@ let drawHomeButton = function() {
 
 //draws pause button
 let drawPauseButton = function() {
+    //draw background
     ctx.fillStyle = '#9E9E9E';
     ctx.fillRect(755, 5, 40, 40);
 
+    //draw pause symbol
     ctx.fillStyle = '#000000';
     ctx.fillRect(762, 10, 10, 30);
     ctx.fillRect(778, 10, 10, 30);
 };
 
-//draws player
-let drawPlayer = function(transparancy, x, y, rotation) {
-    ctx.save();
-
-    ctx.translate(x, y);
-    ctx.rotate(rotation * Math.PI / 180);
-
-    ctx.fillStyle = '#000000' + transparancy;
-    ctx.fillRect((hX*-0.9), (hY*-1.4), (hX*0.4), (hY*0.4));
-    ctx.fillRect((hX*-0.9), (hY*1.1), (hX*0.4), (hY*0.4));
-    ctx.fillRect((hX*0.5), (hY*-1.4), (hX*0.4), (hY*0.4));
-    ctx.fillRect((hX*0.5), (hY*1.1), (hX*0.4), (hY*0.4));
-
-    ctx.fillStyle = '#FF0000' + transparancy;
-    ctx.fillRect((hX*-1), (hY*-1), (hX*2), (hY*2));
-
-    ctx.fillStyle = '#ff9900' + transparancy;
-    ctx.fillRect((hX*-0.75), (hY*-0.5), (hX*0.5), hY);
-
-    ctx.restore();
-};
-
-let drawGhost = function(transparancy, x, y, rotation, increaseTick, loopGhost) {
-    if (restarted == false) {
-        if (bestTimeX[raceTicks] != undefined) {
-            drawPlayer(transparancy, x, y, rotation);
-        } else if (loopGhost) {
-            raceTicks = 0;
-        }
-
-        raceTicks += increaseTick;
-    };
-};
-
-
-
 ///////////////////////
 //COLLISION FUNCTIONS//
 ///////////////////////
 
-//does all collision, runs getHitboxCorners, checkBoundaryCollision, checkWallCollision, and checkGrassCollision
-let checkCollision = function() {
-    getHitboxCorners();
-    checkBoundaryCollision();
-    checkWallCollision();
-    checkGrassCollision();
+//gets coordinates of the hitbox's corners
+let getHitbox = function() {
+    //top left corner
+    playerHitboxX[0] = (-halfLength*Math.cos(playerRotationRad) - halfHeight*Math.sin(playerRotationRad)) + playerX;
+    playerHitboxY[0] = (-halfLength*Math.sin(playerRotationRad) + halfHeight*Math.cos(playerRotationRad)) + playerY;
+
+    //top right corner
+    playerHitboxX[1] = (-halfLength*Math.cos(playerRotationRad) - -halfHeight*Math.sin(playerRotationRad)) + playerX;
+    playerHitboxY[1] = (-halfLength*Math.sin(playerRotationRad) + -halfHeight*Math.cos(playerRotationRad)) + playerY;
+
+    //bottom right corner
+    playerHitboxX[2] = (halfLength*Math.cos(playerRotationRad) - -halfHeight*Math.sin(playerRotationRad)) + playerX;
+    playerHitboxY[2] = (halfLength*Math.sin(playerRotationRad) + -halfHeight*Math.cos(playerRotationRad)) + playerY;
+
+    //bottom left corner
+    playerHitboxX[3] = (halfLength*Math.cos(playerRotationRad) - halfHeight*Math.sin(playerRotationRad)) + playerX;
+    playerHitboxY[3] = (halfLength*Math.sin(playerRotationRad) + halfHeight*Math.cos(playerRotationRad)) + playerY;
 };
 
+//gets the quadrant that each hitbox corner is in
+let getPlayerQuadrant = function() {
+    for (let i = 0; i < 4; i++) {
+        //get x and y quadrant for hitbox corners
+        playerHitboxQuadrantX[i] = Math.floor(playerHitboxX[i] / 50);
+        playerHitboxQuadrantY[i] = Math.floor(playerHitboxY[i] / 50);
 
+        //prevent leaving quadrants
+        if (playerHitboxQuadrantX[i] < 0) {playerHitboxQuadrantX[i] = 0};
+        if (playerHitboxQuadrantX[i] > 15) {playerHitboxQuadrantX[i] = 15};
+        if (playerHitboxQuadrantY[i] < 0) {playerHitboxQuadrantY[i] = 0};
+        if (playerHitboxQuadrantY[i] > 15) {playerHitboxQuadrantY[i] = 15};
 
-////////////////////////////
-//LAP COMPLETION FUNCTIONS//
-////////////////////////////
-
-//count laps and time, triggers checkCheckpoint
-let countLaps = function() {
-    currentTime = getCurrentTimer();
-    currentMin = Math.floor(currentTime/60000);
-    currentSec = Math.floor((currentTime%60000) / 1000);
-
-    if (currentSec < 10) {
-        currentSec = "0" + currentSec;
-    };
-
-    currentMilli = currentTime%1000
-
-    if (currentMilli < 10) {
-        currentMilli = "00" + currentMilli;
-    } else if (currentMilli < 100) {
-        currentMilli = "0" + currentMilli;
-    };
-    
-    //first checkpoint at middle of left vertical track
-    checkCheckpoint(0, 190, 390, 400, 1, 4);
-
-    //second checkpoint at middle of top horizontal track
-    checkCheckpoint(390, 400, 0, 190, 2, 1);
-
-    //third checkpoint next to right horizontal line
-    checkCheckpoint(210, 390, 390, 400, 3, 2);
-
-    //fourth checkpoint at finish line
-    checkCheckpoint(320, 330, 610, 800, 4, 3)
-};
-
-
-
-/////////////////////
-//WRITING FUNCTIONS//
-/////////////////////
-
-//writes current, last, and best times
-let writeTimes = function() {
-    ctx.fillStyle = "#000000";
-    ctx.font = "20px Arial";
-    ctx.textAlign = 'left';
-
-    ctx.fillText("Laps finished: " + lapsCompleted + '/3', 580, 30);
-
-    if (currentTime != NaN) {
-        if (restarted == false) {
-            ctx.fillText("Current Time: " + currentMin+ ":" + currentSec + "." + currentMilli, 10, 30);
-        } else {
-            ctx.fillText("Current Time: ", 10, 30);
-        };
-
-        if (lastTime != NaN && lastTime != undefined) {
-            ctx.fillText("Last time: " + lastMin + ":" + lastSec + "." + lastMilli, 10, 780);
-            ctx.fillText("Best time: " + bestMin + ":" + bestSec + "." + bestMilli, 600, 780);
-        } else {
-            ctx.fillText('Last time: ', 10, 780);
-            ctx.fillText('Best time: ', 600, 780);
-
-        };
+        //get offset from x and y quadrant
+        playerHitboxOffsetX[i] = Math.floor(playerHitboxX[i] % 50);
+        playerHitboxOffsetY[i] = Math.floor(playerHitboxY[i] % 50);        
     };
 };
 
-//writes only best time
-let writeBestTime = function() {
-    ctx.fillStyle = '#000000';
-    ctx.font = '20px Arial';
-    ctx.textAlign = 'left';
+//stops driving of the end of the canvas
+let checkBoundaryCollision = function() {
+    //check left wall
+    if (playerHitboxX.some(x => x < 1)) {
+        playerSpeed = (playerRotation < 90 || playerRotation > 270) ? -1 : 1;
+    };
 
-    ctx.fillText('Best time: ' + bestMin + ':' + bestSec + '.' + bestMilli, 10, 30);
-};
+    //check right wall
+    if (playerHitboxX.some(x => x > 799)) {
+        playerSpeed = (playerRotation > 90 && playerRotation < 270) ? -1 : 1;
+    };
 
-let writeLaps = function() {
-    ctx.fillStyle = "#000000";
-    ctx.font = "20px Arial";
-    ctx.textAlign = 'left';
-    ctx.fillText("Laps finished: " + lapsCompleted + '/3', 580, 30);
-};
+    //check top wall
+    if (playerHitboxY.some(x => x < 1)) {
+        playerSpeed = (playerRotation < 180 && playerRotation > 0) ? -1 : 1;
+    };
 
-let writeCountDown = function() {
-    ctx.fillStyle = '#000000';
-    ctx.font = '100px Arial';
-    ctx.textAlign = 'center';
-
-    if (getCurrentTimer() < 1000) {
-        ctx.fillText('3', 400, 425);
-    } else if (getCurrentTimer() < 2000) {
-        ctx.fillText('2', 400, 425);
-    } else if (getCurrentTimer() < 3000) {
-        ctx.fillText('1', 400, 425);
-    } else {
-        startTimer();
-        phase = 'race';
+    //check bottom wall
+    if (playerHitboxY.some(x => x > 799)) {
+        playerSpeed = (playerRotation > 180 && playerRotation < 360) ? -1 : 1;
     };
 };
 
-//writes pause message
-let writePauseMessage = function() {
-    ctx.fillStyle = "#000000";
-    ctx.font = "100px Arial";
-    ctx.textAlign = 'center';
-    ctx.fillText("Paused", 400, 425);
-};
+//adds wall collision
+let checkWallCollision = function() {
+    //do with playerHitboxQuadrantX and playerHitboxOffsetX
 
+    for (let i = 0; i < 4; i++) {
+        let quadrant = currentCourse[playerHitboxQuadrantY[i]][playerHitboxQuadrantX[i]];
 
-
-///////////////////////////////
-//START AND RESTART FUNCTIONS//
-///////////////////////////////
-
-//checks for restart key pressed
-let checkForRestart = function() {
-    if (pressedKeys.has('KeyR')) {
-        if (phase == 'race') {
-            raceVariables()
-            phase = 'startRace';
-        } else {
-            timeTrialVariables();
-        };
-    };
-};
-
-
-
-//////////////////////////////////////////
-//EVENT LISTENER AND DETECTION FUNCTIONS//
-//////////////////////////////////////////
-
-//checks for keys pressed
-let eventListeners = function() {
-    window.addEventListener('keydown', e => {
-        pressedKeys.add(e.code);
-    });
-
-    window.addEventListener('keyup', e => {
-        pressedKeys.delete(e.code);
-    });
-
-    canvas.addEventListener('click', checkForClick);
-};
-
-//check for pause/home button clicked
-let checkForClick = function(event) {
-    const rect = canvas.getBoundingClientRect();
-    const clickX = event.clientX - rect.left;
-    const clickY = event.clientY - rect.top;
-    
-    switch (phase) {
-        case 'home':
-            if (100 < clickX && clickX < 700 && 100 < clickY && clickY < 200) {
-                phase = 'timeTrialSelect';
-            } else if (100 < clickX && clickX < 700 && 300 < clickY && clickY < 400) {
-                raceVariables();
-                startTimer();
-                phase = 'startRace';
+        //top wall, top left inside corner, top right inside corner
+        if (['d', 'k', 'l'].some(x => x == quadrant)) {
+            if (playerHitboxOffsetY[i] <= 10) {
+                playerSpeed = (playerRotation <= 180 && playerRotation >= 0) ? -1 : 1;
             };
+        };
 
-            break
-
-        case 'timeTrialSelect':
-            if (5 < clickX && clickX < 45 && 5 < clickY && clickY < 45) {
-                phase = 'home';
-            } else if (100 < clickX && clickX < 700 && 50 < clickY && clickY < 250) {
-                timeTrialVariables();
-                phase = 'timeTrialSolo';
-            } else if (100 < clickX && clickX < 700 && 300 < clickY && clickY < 500) {
-                timeTrialVariables();
-                phase = 'timeTrialGhost';
-            } else if (100 < clickX && clickX < 700 && 550 < clickY && clickY < 750) {
-                raceTicks = 0;
-                phase = 'timeTrialView';
+        //right wall, top right inside corner, bottom right inside corner
+        if (['f', 'l', 'm'].some(x => x == quadrant)) {
+            if (playerHitboxOffsetX[i] >= 40) {
+                playerSpeed = (playerRotation >= 90 && playerRotation <= 270) ? -1 : 1;
             };
+        };
 
-            break;
+        //bottom wall, bottom right inside corner, bottom left inside corner
+        if (['h', 'm', 'n'].some(x => x == quadrant)) {
+            if (playerHitboxOffsetY[i] >= 40) {
+                playerSpeed = (playerRotation >= 180 && playerRotation <= 360) ? -1 : 1;
+            };
+        };
+
+        //left wall, bottom left inside corner, top left inside corner
+        if (['j', 'n', 'k'].some(x => x == quadrant)) {
+            if (playerHitboxOffsetX[i] <= 10) {
+                playerSpeed = (playerRotation <= 90 || playerRotation >= 270) ? -1 : 1;
+            };
+        };
+
+        //top left corner
+        if (quadrant == 'c') {
+            if (playerHitboxOffsetX[i] <= 10 && playerHitboxOffsetY[i] <= 10) {
+                if ((playerRotation >= 90 && playerRotation <= 180) || playerRotation >= 270) {
+                    if (i <= 1) {
+                        playerSpeed = -1;
+                    } else {
+                        playerSpeed = 1;
+                    };
+                } else if (playerRotation <= 90) {
+                    playerSpeed = -1;
+                } else {
+                    playerSpeed = 1;
+                };
+            };
+        };
+
+        //top right corner
+        if (quadrant == 'e') {
+            if (playerHitboxOffsetX[i] >= 40 && playerHitboxOffsetY[i] <= 10) {
+                if (playerRotation <= 90 || (playerRotation >= 180 && playerRotation <= 270)) {
+                    if (i <= 1) {
+                        playerSpeed = -1;
+                    } else {
+                        playerSpeed = 1;
+                    };
+                } else if (playerRotation >= 90 && playerRotation <= 180) {
+                    playerSpeed = -1;
+                } else {
+                    playerSpeed = 1;
+                };
+            };
+        };
+
+        //bottom right corner
+        if (quadrant == 'g') {
+            if (playerHitboxOffsetX[i] >= 40 && playerHitboxOffsetY[i] >= 40) {
+                if ((playerRotation <= 90 && playerRotation <= 180) || playerRotation >= 270) {
+                    if (i <= 1) {
+                        playerSpeed = -1;
+                    } else {
+                        playerSpeed = 1;
+                    };
+                } else if (playerRotation >= 180 && playerRotation <= 270) {
+                    playerSpeed = -1;
+                } else {
+                    playerSpeed = 1;
+                };
+            };
+        };
         
-        case 'timeTrialSolo':
-            if (755 < clickX && clickX < 795 && 5 < clickY && clickY < 45) {
-                phase = 'pausedTimeTrialSolo';
-                pauseTimer();
+        //bottom left corner
+        if (quadrant == 'i') {
+            if (playerHitboxOffsetX[i] <= 10 && playerHitboxOffsetY[i] >= 40) {
+                if (playerRotation <= 90 || (playerRotation >= 180 && playerRotation <= 270)) {
+                    if (i <= 1) {
+                        playerSpeed = -1;
+                    } else {
+                        playerSpeed = 1;
+                    };
+                } else if (playerRotation >= 270) {
+                    playerSpeed = -1;
+                } else {
+                    playerSpeed = 1;
+                };
             };
-            
-            break;
-
-        case 'pausedTimeTrialSolo':
-            if (5 < clickX && clickX < 45 && 5 < clickY && clickY < 45) {
-                phase = 'home';
-            } else if (755 < clickX && clickX < 795 && 5 < clickY && clickY < 45) {
-                phase = 'timeTrialSolo';
-                unpauseTimer();
-            };
-
-            break;
-
-        case 'timeTrialGhost':
-            if (755 < clickX && clickX < 795 && 5 < clickY && clickY < 45) {
-                phase = 'pausedTimeTrialGhost';
-                pauseTimer();
-            };
-
-            break;
-
-        case 'pausedTimeTrialGhost':
-            if (5 < clickX && clickX < 45 && 5 < clickY && clickY < 45) {
-                phase = 'home';
-            } else if (755 < clickX && clickX < 795 && 5 < clickY && clickY < 45) {
-                phase = 'timeTrialGhost';
-                unpauseTimer();
-            };
-
-            break;
-
-        case 'timeTrialView':
-            if (755 < clickX && clickX < 795 && 5 < clickY && clickY < 45) {
-                phase = 'pausedTimeTrialView';
-            };
-
-            break;
-
-        case 'pausedTimeTrialView':
-            if (5 < clickX && clickX < 45 && 5 < clickY && clickY < 45) {
-                phase = 'home';
-            } else if (755 < clickX && clickX < 795 && 5 < clickY && clickY < 45) {
-                phase = 'timeTrialView';
-            };
-
-            break;
-
-        case 'race':
-            if (755 < clickX && clickX < 795 && 5 < clickY && clickY < 45) {
-                phase = 'pausedRace';
-            };
-
-            break;
-
-        case 'pausedRace':
-            if (5 < clickX && clickX < 45 && 5 < clickY && clickY < 45) {
-                phase = 'home';
-            } else if (755 < clickX && clickX < 795 && 5 < clickY && clickY < 45) {
-                phase = 'race';
-            };
-
-            break;
+        };
     };
 };
 
+//adds grass collsion
+let checkGrassCollision = function() {
+    for (let i = 0; i < 4; i++) {
+        let quadrant = currentCourse[playerHitboxQuadrantY[i]][playerHitboxQuadrantX[i]];
 
+        if (!['b', 'o', 'p'].some(x => x == quadrant)) {
+            playerSpeedMultiplier *= grassStrength;
+        };
+    };
+};
 
-//////////////////////
-//GAME TICK FUNCTION//
-//////////////////////
+///////////////////////////
+//LAP DETECTION FUNCTIONS//
+///////////////////////////
 
-//sets game ticks
+//checks if a car is inside a checkpoint
+let checkCheckpoint = function(x1, y1, x2, y2) {
+    if (playerX > x1 && playerX < x2 && playerY > y1 && playerY < y2) {
+        raceSection += 1;
+        if (raceSection > 3) {
+            raceSection = 0;
+            countLap();
+        };
+    };
+};
+
+//counts laps
+let countLap = function() {
+    lapsCompleted++;
+    console.log(lapsCompleted);
+
+    if (lapsCompleted == lapsInRace) {
+        lapsCompleted = 0;
+    };
+};
+
 let tick = function() {
-    actualTime = Date.now();
+    //change player coordinates and rotation
+    if (phase == 'drive') {
+        //move car
+        steerCar();
+        accelerateCar();
 
+        //wall and boundary collision
+        getHitbox();
+        getPlayerQuadrant();
+        
+        checkBoundaryCollision();
+        checkWallCollision();
+        playerSpeedMultiplier = 1;
+        checkGrassCollision();
+
+        //track player movements for time trial
+        if (raceMode = 'timeTrial') {
+            recordPlayerPosition();
+        };
+    };
+
+    //drawing
     switch (phase) {
         case 'home':
-            drawHomeScreen();
+            drawHomeMenu();
+            break;
 
+        case 'courseSelect':
+            drawCourseMenu();
             break;
         
-        case 'timeTrialSelect':
-            drawTimeTrialSelect();
-            drawHomeButton();
-
+        case 'characterSelect':
+            drawCharacterMenu();
             break;
 
-        case 'timeTrialSolo':
-            steerCar();
-            accelerateCar();
-            playerPositionArray();
+        case 'drive':
+            drawCourse('FF');
+            drawCar('FF0000', 'FF9900', 'FF', playerX, playerY, playerRotationRad);
 
-            drawRoad('FF');
+            if (raceMode == 'timeTrial') {
+                //draw ghost
+            } else if (raceMode == 'race') {
+                //draw opponents
+            };
+
             drawPauseButton();
-            drawPlayer('FF', playerX, playerY, playerRotation);
-
-            checkCollision();
-            countLaps();
-
-            writeTimes();
-
-            checkForRestart();
-
-            break;
-
-        case 'pausedTimeTrialSolo':
-            drawRoad('44');
-            drawHomeButton();
-            drawPauseButton();
-            drawPlayer('99', playerX, playerY, playerRotation);
-
-            writePauseMessage();
-
             break;
         
-        case 'timeTrialGhost':
-            steerCar();
-            accelerateCar();
-            playerPositionArray();
+        case 'paused':
+            drawCourse('55');
+            drawCar('FF0000', 'FF9900', '99', playerX, playerY, playerRotationRad);
+            if (raceMode == 'timeTrial') {
+                //draw ghost
+            } else if (raceMode == 'race') {
+                //draw opponents
+            };
 
-            drawRoad('FF')
             drawPauseButton();
-            drawPlayer('FF', playerX, playerY, playerRotation)
-            drawGhost('66', bestTimeX[raceTicks], bestTimeY[raceTicks], bestTimeRotation[raceTicks], 1, false);
-
-            checkCollision();
-            countLaps();
-
-            writeTimes();
-
-            checkForRestart();
-
             break;
+    };
 
-        case 'pausedTimeTrialGhost':
-            drawRoad('44');
-            drawHomeButton();
-            drawPauseButton();
-            drawPlayer('99', playerX, playerY, playerRotation);
-            drawGhost('22', bestTimeX[raceTicks], bestTimeY[raceTicks], bestTimeRotation[raceTicks], 0, false);
+    drawHomeButton();
 
-            writePauseMessage();
+    //lap detection
+    if (phase == 'drive') {
+        checkCheckpoint(currentCourseCheckpoints[raceSection][0], currentCourseCheckpoints[raceSection][1], currentCourseCheckpoints[raceSection][2], currentCourseCheckpoints[raceSection][3]);
+    };
 
-            break;
-
-        case 'timeTrialView':
-            drawRoad('FF');
-            drawPauseButton();
-            drawGhost('FF', bestTimeX[raceTicks], bestTimeY[raceTicks], bestTimeRotation[raceTicks], 1, true)
-
-            writeBestTime();
-
-            break;
-        
-        case 'pausedTimeTrialView':
-            drawRoad('44');
-            drawHomeButton();
-            drawPauseButton();
-            drawGhost('99', bestTimeX[raceTicks], bestTimeY[raceTicks], bestTimeRotation[raceTicks], 0, true);
-
-            writePauseMessage();
-
-            break;
-
-        case 'startRace':
-            drawRoad('FF');
-            drawPlayer('FF', playerX, playerY, playerRotation);
-
-            writeCountDown();
-
-            break;
-
-        case 'race':
-            steerCar();
-            accelerateCar();
-
-            drawRoad('FF');
-            drawPauseButton();
-            drawPlayer('FF', playerX, playerY, playerRotation);
-
-            checkCollision();
-            countLaps();
-
-            writeLaps();
-
-            checkForRestart();
-
-            break;
-
-        case 'pausedRace':
-            drawRoad('44');
-            drawHomeButton();
-            drawPauseButton();
-            drawPlayer('99', playerX, playerY, playerRotation);
-
-            writePauseMessage();
-
-            break;
-    }; 
-
+    //run next tick
     setTimeout(tick, (1000/60));
 };
 
-//runs functions to start game
+//run the event listeners and the tick for the game
+timeTrialVariables();
 eventListeners();
 tick();
-
-
-///////////////////
-//NOTES FOR LATER//
-///////////////////
-
-//check raceVariables and timeTrialVariables, they are currently the same
-//make races count laps properly and end after 3 laps
