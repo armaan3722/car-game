@@ -52,6 +52,11 @@ const lapsInRace = 3;
 let playerXArray = [];
 let playerYArray = [];
 let playerRotationArray = [];
+let ghostXArray = [];
+let ghostYArray = [];
+let ghostRotationArray = [];
+let frameNumber;
+let bestTime = null;
 
 //canvas variable
 let ctx = document.getElementById('canvas').getContext('2d');
@@ -125,6 +130,10 @@ let timeTrialVariables = function() {
     playerSpeedMultiplier = 1;
     raceSection = 0;
     lapsCompleted = 0;
+    playerXArray = [];
+    playerYArray = [];
+    playerRotationArray = [];
+    frameNumber = 0;
 };
 
 ////////////////////////////
@@ -422,10 +431,10 @@ let drawCar = function(colour, colourTwo, transparancy, x, y, rotation) {
     ctx.fillRect((halfLength*0.5), (halfHeight*1.1), (halfLength*0.4), (halfHeight*0.4));
 
     //draw car body
-    ctx.fillStyle = '#FF0000';
+    ctx.fillStyle = '#FF0000' + transparancy;
     ctx.fillRect((halfLength*-1), (halfHeight*-1), (halfLength*2), (halfHeight*2));
 
-    ctx.fillStyle = '#FFFF00';
+    ctx.fillStyle = '#FFFF00' + transparancy;
     ctx.fillRect((halfLength*-0.75), (halfHeight*-0.5), (halfLength*0.5), halfHeight);
 
     //restore canvas to normal
@@ -453,7 +462,7 @@ let drawHomeMenu = function() {
     //write version number
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('v0.1.0.2', 20, 780);
+    ctx.fillText('v0.2.0.3', 20, 780);
 };
 
 //draws course menu
@@ -707,6 +716,8 @@ let checkWallCollision = function() {
 
 //adds grass collsion
 let checkGrassCollision = function() {
+    playerSpeedMultiplier = 1;
+
     for (let i = 0; i < 4; i++) {
         let quadrant = currentCourse[playerHitboxQuadrantY[i]][playerHitboxQuadrantX[i]];
 
@@ -734,10 +745,23 @@ let checkCheckpoint = function(x1, y1, x2, y2) {
 //counts laps
 let countLap = function() {
     lapsCompleted++;
-    console.log(lapsCompleted);
 
     if (lapsCompleted == lapsInRace) {
         lapsCompleted = 0;
+
+        if (raceMode = "timeTrial") {
+            if (frameNumber < bestTime || bestTime == null) {
+                ghostXArray = playerXArray;
+                ghostYArray = playerYArray;
+                ghostRotationArray = playerRotationArray;
+                bestTime = frameNumber;
+            };
+
+            playerXArray = [];
+            playerYArray = [];
+            playerRotationArray = [];
+            frameNumber = 0;
+        };
     };
 };
 
@@ -754,7 +778,6 @@ let tick = function() {
         
         checkBoundaryCollision();
         checkWallCollision();
-        playerSpeedMultiplier = 1;
         checkGrassCollision();
 
         //track player movements for time trial
@@ -781,11 +804,15 @@ let tick = function() {
             drawCourse('FF');
             drawCar('FF0000', 'FF9900', 'FF', playerX, playerY, playerRotationRad);
 
-            if (raceMode == 'timeTrial') {
+            if (raceMode == 'timeTrial' && frameNumber < ghostXArray.length) {
                 //draw ghost
+                drawCar('FF0000', 'FF9900', '88', ghostXArray[frameNumber], ghostYArray[frameNumber], ghostRotationArray[frameNumber] * (Math.PI/180));
             } else if (raceMode == 'race') {
                 //draw opponents
             };
+
+            //update frame number
+            frameNumber++
 
             drawPauseButton();
             break;
@@ -793,8 +820,9 @@ let tick = function() {
         case 'paused':
             drawCourse('55');
             drawCar('FF0000', 'FF9900', '99', playerX, playerY, playerRotationRad);
-            if (raceMode == 'timeTrial') {
+            if (raceMode == 'timeTrial' && frameNumber < ghostXArray.length) {
                 //draw ghost
+                drawCar('FF0000', 'FF9900', '33', ghostXArray[frameNumber], ghostYArray[frameNumber], ghostRotationArray[frameNumber] * (Math.PI/180));
             } else if (raceMode == 'race') {
                 //draw opponents
             };
@@ -815,6 +843,5 @@ let tick = function() {
 };
 
 //run the event listeners and the tick for the game
-timeTrialVariables();
 eventListeners();
 tick();
