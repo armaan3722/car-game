@@ -1,6 +1,6 @@
 TO DO
- - Add built in ghosts
  - Add timer
+ - Add built in ghosts
  - Add lap counter display
  - Add countdown at start of race
 

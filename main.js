@@ -56,6 +56,9 @@ let playerRotationArray = [];
 let playerGhostXArray = [];
 let playerGhostYArray = [];
 let playerGhostRotationArray = [];
+let courseOneGhostOneXArray = [];
+let courseOneGhostOneYArray = [];
+let courseOneGhostOneRotationArray = [];
 let frameNumber;
 let bestTime = null;
 
@@ -490,7 +493,7 @@ let drawHomeMenu = function() {
     //write version number
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('v0.2.0.4', 20, 780);
+    ctx.fillText('v0.2.0.5', 20, 780);
 };
 
 //draws course menu

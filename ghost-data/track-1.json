@@ -1,0 +1,22 @@
+{
+    "goldData": {
+        "x": 1,
+        "y": 1,
+        "rotation": 1
+    },
+    "silverData": {
+        "x": 1,
+        "y": 1,
+        "rotation": 1
+    },
+    "bronzeData": {
+        "x": 1,
+        "y": 1,
+        "rotation": 1
+    },
+    "times": {
+        "gold": 1,
+        "silver": 1,
+        "bronze": 1
+    }
+}
