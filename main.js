@@ -3,7 +3,7 @@
 ////////////////////////
 
 //phase variable
-//can be home, courseSelect, characterSelect, drive, paused
+//can be home, courseSelect, characterSelect, ghostSelect, drive, paused
 //only switches with it are in tick() and detectClick()
 let phase = 'home';
 
@@ -11,6 +11,7 @@ let phase = 'home';
 let raceMode;//race or timeTrial
 let courseChosen;//course 1, 2, 3, 4, tournament A1, A2, A3, A4
 let characterChosen;//car 1, 2, 3
+let ghostChosen;//defaultOne, player, none
 
 //const variables for drawing
 const halfLength = 15;
@@ -52,9 +53,9 @@ const lapsInRace = 3;
 let playerXArray = [];
 let playerYArray = [];
 let playerRotationArray = [];
-let ghostXArray = [];
-let ghostYArray = [];
-let ghostRotationArray = [];
+let playerGhostXArray = [];
+let playerGhostYArray = [];
+let playerGhostRotationArray = [];
 let frameNumber;
 let bestTime = null;
 
@@ -106,6 +107,7 @@ let returnToHomeVariables = function() {
     raceMode = null;
     courseChosen = null;
     characterChosen = null;
+    ghostChosen = null;
 };
 
 //sets variables to default for races
@@ -197,14 +199,40 @@ let detectClick = function(event) {
 
         case 'characterSelect':
             if (100 < clickX && clickX < 700 && 100 < clickY && clickY < 200) {
-                phase = 'drive';
+                if (raceMode = 'timeTrial') {
+                    phase = 'ghostSelect';
+                } else {
+                    phase = 'drive';
+                };
                 characterChosen = '1';
             } else if (100 < clickX && clickX < 700 && 350 < clickY && clickY < 450) {
-                phase = 'drive';
+                if (raceMode = 'timeTrial') {
+                    phase = 'ghostSelect';
+                } else {
+                    phase = 'drive';
+                };
                 characterChosen = '2';
             } else if (100 < clickX && clickX < 700 && 600 < clickY && clickY < 700) {
-                phase = 'drive';
+                if (raceMode = 'timeTrial') {
+                    phase = 'ghostSelect';
+                } else {
+                    phase = 'drive';
+                };
                 characterChosen = '3';
+            };
+
+            break;
+        
+        case 'ghostSelect':
+            if (100 < clickX && clickX < 700 && 100 < clickY && clickY < 200) {
+                ghostChosen = 'defaultOne';
+                phase = 'drive';
+            } else if (100 < clickX && clickX < 700 && 350 < clickY && clickY < 450) {
+                ghostChosen = 'player';
+                phase = 'drive';
+            } else if (100 < clickX && clickX < 700 && 600 < clickY && clickY < 700) {
+                ghostChosen = 'none';
+                phase = 'drive';
             };
 
             break;
@@ -462,7 +490,7 @@ let drawHomeMenu = function() {
     //write version number
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('v0.2.0.3', 20, 780);
+    ctx.fillText('v0.2.0.4', 20, 780);
 };
 
 //draws course menu
@@ -542,6 +570,35 @@ let drawPauseButton = function() {
     ctx.fillStyle = '#000000';
     ctx.fillRect(762, 10, 10, 30);
     ctx.fillRect(778, 10, 10, 30);
+};
+
+//draws pause drawPauseMessage
+let drawPauseMessage = function() {
+    ctx.fillStyle = '#000000FF';
+    ctx.font = '75px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Paused', 400, 420);
+};
+
+//draws time trial ghost selection screen
+let drawTimeTrialMenu = function() {
+    //draw background
+    ctx.fillStyle = '#111188';
+    ctx.fillRect(0, 0, 800, 800);
+
+    //draw buttons
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(100, 100, 600, 100);
+    ctx.fillRect(100, 350, 600, 100);
+    ctx.fillRect(100, 600, 600, 100);
+
+    //write text on buttons
+    ctx.fillStyle = '#000000';
+    ctx.font = '50px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Default ghost', 400, 165);
+    ctx.fillText('Player ghost', 400, 415);
+    ctx.fillText('No ghost', 400, 665);
 };
 
 ///////////////////////
@@ -751,9 +808,9 @@ let countLap = function() {
 
         if (raceMode = "timeTrial") {
             if (frameNumber < bestTime || bestTime == null) {
-                ghostXArray = playerXArray;
-                ghostYArray = playerYArray;
-                ghostRotationArray = playerRotationArray;
+                playerGhostXArray = playerXArray;
+                playerGhostYArray = playerYArray;
+                playerGhostRotationArray = playerRotationArray;
                 bestTime = frameNumber;
             };
 
@@ -800,13 +857,17 @@ let tick = function() {
             drawCharacterMenu();
             break;
 
+        case 'ghostSelect':
+            drawTimeTrialMenu();
+            break;
+
         case 'drive':
             drawCourse('FF');
             drawCar('FF0000', 'FF9900', 'FF', playerX, playerY, playerRotationRad);
 
-            if (raceMode == 'timeTrial' && frameNumber < ghostXArray.length) {
+            if (raceMode == 'timeTrial' && frameNumber < playerGhostXArray.length && ghostChosen != 'none') {
                 //draw ghost
-                drawCar('FF0000', 'FF9900', '88', ghostXArray[frameNumber], ghostYArray[frameNumber], ghostRotationArray[frameNumber] * (Math.PI/180));
+                drawCar('FF0000', 'FF9900', '88', playerGhostXArray[frameNumber], playerGhostYArray[frameNumber], playerGhostRotationArray[frameNumber] * (Math.PI/180));
             } else if (raceMode == 'race') {
                 //draw opponents
             };
@@ -820,14 +881,15 @@ let tick = function() {
         case 'paused':
             drawCourse('55');
             drawCar('FF0000', 'FF9900', '99', playerX, playerY, playerRotationRad);
-            if (raceMode == 'timeTrial' && frameNumber < ghostXArray.length) {
+            if (raceMode == 'timeTrial' && frameNumber < playerGhostXArray.length && ghostChosen != 'none') {
                 //draw ghost
-                drawCar('FF0000', 'FF9900', '33', ghostXArray[frameNumber], ghostYArray[frameNumber], ghostRotationArray[frameNumber] * (Math.PI/180));
+                drawCar('FF0000', 'FF9900', '33', playerGhostXArray[frameNumber], playerGhostYArray[frameNumber], playerGhostRotationArray[frameNumber] * (Math.PI/180));
             } else if (raceMode == 'race') {
                 //draw opponents
             };
 
             drawPauseButton();
+            drawPauseMessage();
             break;
     };
 

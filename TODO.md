@@ -1,9 +1,12 @@
 TO DO
+ - Add built in ghosts
+ - Add timer
+ - Add lap counter display
+ - Add countdown at start of race
 
 Current feature to work on:
  - Ghosts and player ghosts for time trials
    - Game comes with 3 ghosts built in with 3 different difficulties
-   - Selection for ghost to compete against or solo race is added to UI
    - Countdown added to the start of the race
    - Timer added to the screen, as well as lap counter
    - End after 3 laps
