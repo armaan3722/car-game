@@ -493,7 +493,7 @@ let drawHomeMenu = function() {
     //write version number
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('v0.2.0.5', 20, 780);
+    ctx.fillText('v0.2.0.6', 20, 780);
 };
 
 //draws course menu
@@ -602,6 +602,14 @@ let drawTimeTrialMenu = function() {
     ctx.fillText('Default ghost', 400, 165);
     ctx.fillText('Player ghost', 400, 415);
     ctx.fillText('No ghost', 400, 665);
+};
+
+//draws current time
+let drawCurrentTime = function() {
+    ctx.fillStyle = '#000000';
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText((frameNumber/60).toFixed(3), 20, 780);
 };
 
 ///////////////////////
@@ -867,6 +875,7 @@ let tick = function() {
         case 'drive':
             drawCourse('FF');
             drawCar('FF0000', 'FF9900', 'FF', playerX, playerY, playerRotationRad);
+            drawCurrentTime();
 
             if (raceMode == 'timeTrial' && frameNumber < playerGhostXArray.length && ghostChosen != 'none') {
                 //draw ghost
