@@ -21,10 +21,10 @@ const tileSize = 50;
 //higher number is weaker grass
 const grassStrength = 0.95;
 
-//control sensitivity and speed limit variables
-const rotationSpeed = 4;
-const accelerationSpeed = 0.3;
-const maxSpeed = 7;
+//control sensitivity and speed limit variables in units per second
+const rotationSpeed = 240;//degrees per second
+const accelerationSpeed = 1080;//pixels per second per second
+const maxSpeed = 420;//pixels per second
 
 //car variables
 let playerX;
@@ -61,6 +61,10 @@ let courseOneGhostOneYArray = [];
 let courseOneGhostOneRotationArray = [];
 let frameNumber;
 let bestTime = null;
+
+//timing variables
+let lastTime = 0;
+let delta;
 
 //canvas variable
 let ctx = document.getElementById('canvas').getContext('2d');
@@ -267,14 +271,14 @@ let detectClick = function(event) {
 //////////////////////
 
 //changes the playerRotation
-let steerCar = function() {
+let steerCar = function(frameTime) {
     //rotate car with keys pressed
     if (pressedKeys.has('ArrowLeft')) {
-        playerRotation -= rotationSpeed;
+        playerRotation -= (rotationSpeed * frameTime);
     };
 
     if (pressedKeys.has('ArrowRight')) {
-        playerRotation += rotationSpeed;
+        playerRotation += (rotationSpeed * frameTime);
     };
 
     //prevent rotating above 359 or below 0
@@ -289,31 +293,35 @@ let steerCar = function() {
 };
 
 //moves the car forward or backwards
-let accelerateCar = function() {
+let accelerateCar = function(frameTime) {
     //detect forward and backward
     if (pressedKeys.has('ArrowUp')) {
-        playerSpeed += accelerationSpeed;
+        playerSpeed += (accelerationSpeed * frameTime);
     };
 
     if (pressedKeys.has('ArrowDown')) {
-        playerSpeed -= accelerationSpeed;
+        playerSpeed -= (accelerationSpeed * frameTime);
     };
 
     //decelleration when nothing pressed
     if (!pressedKeys.has('ArrowUp') && !pressedKeys.has('ArrowDown')) {
-        if (playerSpeed > accelerationSpeed) {
-            playerSpeed -= (accelerationSpeed/2);
-        } else if (playerSpeed < (-1*accelerationSpeed)) {
-            playerSpeed += (accelerationSpeed/2);
-        } else {
-            playerSpeed = 0;
+        if (playerSpeed > 0) {
+            playerSpeed -= ((accelerationSpeed * frameTime)/2);
+            if (playerSpeed < 0) {
+                playerSpeed = 0;
+            };
+        } else if (playerSpeed < 0) {
+            playerSpeed += ((accelerationSpeed * frameTime)/2);
+            if (playerSpeed > 0) {
+                playerSpeed = 0;
+            };
         };
     };
 
     //max speed limiting
-    if (playerSpeed > maxSpeed) {
+    if ((playerSpeed) > maxSpeed) {
         playerSpeed = maxSpeed;
-    } else if (playerSpeed < (-1*maxSpeed)) {
+    } else if ((playerSpeed) < (-1*maxSpeed)) {
         playerSpeed = (-1*maxSpeed);
     };
 
@@ -321,8 +329,8 @@ let accelerateCar = function() {
     playerSpeed *= playerSpeedMultiplier;
 
     //convert speed and rotation to x and y changes
-    playerY += -(playerSpeed * Math.sin(playerRotationRad));
-    playerX += -(playerSpeed * Math.cos(playerRotationRad));
+    playerY += -((playerSpeed * frameTime) * Math.sin(playerRotationRad));
+    playerX += -((playerSpeed * frameTime) * Math.cos(playerRotationRad));
 };
 
 //records player's position and rotation for time trials
@@ -493,7 +501,7 @@ let drawHomeMenu = function() {
     //write version number
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('v0.2.0.6', 20, 780);
+    ctx.fillText('v0.2.0.7', 20, 780);
 };
 
 //draws course menu
@@ -833,12 +841,23 @@ let countLap = function() {
     };
 };
 
-let tick = function() {
+/////////////
+//GAME LOOP//
+/////////////
+
+//game tick
+let tick = function(frameTime) {
+    //timing and updating time
+    delta = (frameTime - lastTime) / 1000;
+    lastTime = frameTime;
+
     //change player coordinates and rotation
     if (phase == 'drive') {
         //move car
-        steerCar();
-        accelerateCar();
+        steerCar(delta);
+        accelerateCar(delta);
+
+        console.log(playerSpeed);
 
         //wall and boundary collision
         getHitbox();
@@ -913,9 +932,9 @@ let tick = function() {
     };
 
     //run next tick
-    setTimeout(tick, (1000/60));
+    requestAnimationFrame(tick);
 };
 
 //run the event listeners and the tick for the game
 eventListeners();
-tick();
+requestAnimationFrame(tick);
