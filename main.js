@@ -3,9 +3,10 @@
 ////////////////////////
 
 //phase variable
-//can be home, courseSelect, characterSelect, ghostSelect, drive, paused
+//can be home, courseSelect, characterSelect, ghostSelect, drive, countdown, paused
 //only switches with it are in tick() and detectClick()
 let phase = 'home';
+let previousPhase = 'home'
 
 //options selected variables
 let raceMode;//race or timeTrial
@@ -65,6 +66,9 @@ let bestTime = null;
 //timing variables
 let lastTime = 0;
 let delta;
+let raceStartTime;
+let countdownStartTime;
+let runTime;
 
 //canvas variable
 let ctx = document.getElementById('canvas').getContext('2d');
@@ -167,6 +171,9 @@ let eventListeners = function() {
 
 //detects clicks
 let detectClick = function(event) {
+    //update previous phase
+    previousPhase = phase;
+
     //get x and y of click
     const rect = canvas.getBoundingClientRect();
     const clickX = event.clientX - rect.left;
@@ -233,13 +240,16 @@ let detectClick = function(event) {
         case 'ghostSelect':
             if (100 < clickX && clickX < 700 && 100 < clickY && clickY < 200) {
                 ghostChosen = 'defaultOne';
-                phase = 'drive';
+                phase = 'countdown';
+                countdownStartTime = runTime;
             } else if (100 < clickX && clickX < 700 && 350 < clickY && clickY < 450) {
                 ghostChosen = 'player';
-                phase = 'drive';
+                phase = 'countdown';
+                countdownStartTime = runTime;
             } else if (100 < clickX && clickX < 700 && 600 < clickY && clickY < 700) {
                 ghostChosen = 'none';
-                phase = 'drive';
+                phase = 'countdown';
+                countdownStartTime = runTime;
             };
 
             break;
@@ -271,14 +281,14 @@ let detectClick = function(event) {
 //////////////////////
 
 //changes the playerRotation
-let steerCar = function(frameTime) {
+let steerCar = function(deltaTime) {
     //rotate car with keys pressed
     if (pressedKeys.has('ArrowLeft')) {
-        playerRotation -= (rotationSpeed * frameTime);
+        playerRotation -= (rotationSpeed * deltaTime);
     };
 
     if (pressedKeys.has('ArrowRight')) {
-        playerRotation += (rotationSpeed * frameTime);
+        playerRotation += (rotationSpeed * deltaTime);
     };
 
     //prevent rotating above 359 or below 0
@@ -293,25 +303,25 @@ let steerCar = function(frameTime) {
 };
 
 //moves the car forward or backwards
-let accelerateCar = function(frameTime) {
+let accelerateCar = function(deltaTime) {
     //detect forward and backward
     if (pressedKeys.has('ArrowUp')) {
-        playerSpeed += (accelerationSpeed * frameTime);
+        playerSpeed += (accelerationSpeed * deltaTime);
     };
 
     if (pressedKeys.has('ArrowDown')) {
-        playerSpeed -= (accelerationSpeed * frameTime);
+        playerSpeed -= (accelerationSpeed * deltaTime);
     };
 
     //decelleration when nothing pressed
     if (!pressedKeys.has('ArrowUp') && !pressedKeys.has('ArrowDown')) {
         if (playerSpeed > 0) {
-            playerSpeed -= ((accelerationSpeed * frameTime)/2);
+            playerSpeed -= ((accelerationSpeed * deltaTime)/2);
             if (playerSpeed < 0) {
                 playerSpeed = 0;
             };
         } else if (playerSpeed < 0) {
-            playerSpeed += ((accelerationSpeed * frameTime)/2);
+            playerSpeed += ((accelerationSpeed * deltaTime)/2);
             if (playerSpeed > 0) {
                 playerSpeed = 0;
             };
@@ -329,8 +339,8 @@ let accelerateCar = function(frameTime) {
     playerSpeed *= playerSpeedMultiplier;
 
     //convert speed and rotation to x and y changes
-    playerY += -((playerSpeed * frameTime) * Math.sin(playerRotationRad));
-    playerX += -((playerSpeed * frameTime) * Math.cos(playerRotationRad));
+    playerY += -((playerSpeed * deltaTime) * Math.sin(playerRotationRad));
+    playerX += -((playerSpeed * deltaTime) * Math.cos(playerRotationRad));
 };
 
 //records player's position and rotation for time trials
@@ -501,7 +511,7 @@ let drawHomeMenu = function() {
     //write version number
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('v0.2.0.7', 20, 780);
+    ctx.fillText('v0.2.0.8', 20, 780);
 };
 
 //draws course menu
@@ -618,6 +628,15 @@ let drawCurrentTime = function() {
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
     ctx.fillText((frameNumber/60).toFixed(3), 20, 780);
+};
+
+//draws countdown
+let drawCountdown = function(countdownTime) {
+    ctx.fillStyle = '#FF0000';
+    ctx.font = '50px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(3 - Math.floor(countdownTime/1000), 400, 400);
+    console.log(Math.floor(countdownTime/1000));
 };
 
 ///////////////////////
@@ -846,18 +865,23 @@ let countLap = function() {
 /////////////
 
 //game tick
-let tick = function(frameTime) {
+let tick = function(runTimeLocal) {
     //timing and updating time
-    delta = (frameTime - lastTime) / 1000;
-    lastTime = frameTime;
+    runTime = runTimeLocal
+    delta = (runTime - lastTime) / 1000;
+    lastTime = runTime;
+
+    //change from countdown to drive
+    if (runTime - countdownStartTime > 3000) {
+        previousPhase = phase;
+        phase = 'drive';
+    };
 
     //change player coordinates and rotation
     if (phase == 'drive') {
         //move car
         steerCar(delta);
         accelerateCar(delta);
-
-        console.log(playerSpeed);
 
         //wall and boundary collision
         getHitbox();
@@ -889,6 +913,12 @@ let tick = function(frameTime) {
 
         case 'ghostSelect':
             drawTimeTrialMenu();
+            break;
+        
+        case 'countdown':
+            drawCourse('FF');
+            drawCar('FF0000', 'FF9900', 'FF', playerX, playerY, playerRotationRad);
+            drawCountdown((runTime - countdownStartTime));
             break;
 
         case 'drive':

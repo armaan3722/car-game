@@ -21,6 +21,5 @@ Future - Features to add
 
 IMPORTANT
 Before contiuing work on the rest of the game, fix time
- - Replace setTimeout method with requestAnimationFrame
- - Change all movement, physics, and timing functions to work with inconsistent timing
- - Use linear interpolation and given frame rate for ghosts
+ - Fix timer to use requestAnimationFrame
+ - Use linear interpolation and given frame rate for ghosts and ghost recording
