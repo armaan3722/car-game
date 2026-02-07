@@ -21,5 +21,4 @@ Future - Features to add
 
 IMPORTANT
 Before contiuing work on the rest of the game, fix time
- - Fix timer to use requestAnimationFrame
  - Use linear interpolation and given frame rate for ghosts and ghost recording

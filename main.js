@@ -511,7 +511,7 @@ let drawHomeMenu = function() {
     //write version number
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('v0.2.0.8', 20, 780);
+    ctx.fillText('v0.2.0.9', 20, 780);
 };
 
 //draws course menu
@@ -623,11 +623,34 @@ let drawTimeTrialMenu = function() {
 };
 
 //draws current time
-let drawCurrentTime = function() {
+let drawCurrentTime = function(timeRacing) {
+    //convert from milliseconds to seconds
+    timeRacing = (timeRacing/1000).toFixed(3);
+
+    //create and set variables for hours, minutes, and seconds
+    let timeRacingHours = Math.floor(timeRacing / 3600);
+    let timeRacingMinutes = Math.floor((timeRacing % 3600) / 60);
+    timeRacing = timeRacing % 60;
+    let timeRacingString = "";
+
+    //if not 0 hours, add hours to time
+    if (timeRacingHours != 0) {
+        timeRacingString = timeRacingHours + ":";
+    };
+
+    //if not 0 minutes, add minutes to time
+    if (timeRacingMinutes != 0) {
+        timeRacingString = timeRacingString + timeRacingMinutes + ":";
+    };
+
+    //add seconds to time
+    timeRacingString = timeRacingString + timeRacing
+
+    //write text
     ctx.fillStyle = '#000000';
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText((frameNumber/60).toFixed(3), 20, 780);
+    ctx.fillText(timeRacingString, 20, 780);
 };
 
 //draws countdown
@@ -636,7 +659,6 @@ let drawCountdown = function(countdownTime) {
     ctx.font = '50px Arial';
     ctx.textAlign = 'center';
     ctx.fillText(3 - Math.floor(countdownTime/1000), 400, 400);
-    console.log(Math.floor(countdownTime/1000));
 };
 
 ///////////////////////
@@ -872,9 +894,10 @@ let tick = function(runTimeLocal) {
     lastTime = runTime;
 
     //change from countdown to drive
-    if (runTime - countdownStartTime > 3000) {
+    if (runTime - countdownStartTime > 3000 && phase == 'countdown') {
         previousPhase = phase;
         phase = 'drive';
+        raceStartTime = runTime;
     };
 
     //change player coordinates and rotation
@@ -924,7 +947,7 @@ let tick = function(runTimeLocal) {
         case 'drive':
             drawCourse('FF');
             drawCar('FF0000', 'FF9900', 'FF', playerX, playerY, playerRotationRad);
-            drawCurrentTime();
+            drawCurrentTime((runTime - raceStartTime));
 
             if (raceMode == 'timeTrial' && frameNumber < playerGhostXArray.length && ghostChosen != 'none') {
                 //draw ghost
